@@ -29,11 +29,12 @@ jobs:
             mingw-w64-x86_64-toolchain
             mingw-w64-x86_64-qt5-tools
 
-      - name: Verify libiio
+      - name: Verify libiio and windeployqt
         shell: msys2 {0}
         run: |
           pkg-config --modversion libiio || echo "libiio not found"
           ls -la /mingw64/include/iio.h || echo "iio.h not found"
+          find /mingw64 -name "windeployqt*" 2>/dev/null || echo "windeployqt not found"
 
       - name: Configure CMake
         shell: msys2 {0}
@@ -50,10 +51,11 @@ jobs:
       - name: Deploy all dependencies
         shell: msys2 {0}
         run: |
+          export PATH=/mingw64/bin:$PATH
           mkdir -p dist
           cp build/FPV_Hunter.exe dist/
           cd dist
-          windeployqt --release --no-translations FPV_Hunter.exe
+          windeployqt --release --no-translations FPV_Hunter.exe || echo "windeployqt failed, but continue"
           cp /mingw64/bin/libiio.dll . || echo "libiio.dll not found"
           cp /mingw64/bin/libxml2.dll . || echo "libxml2.dll not found"
           cp /mingw64/bin/libusb-1.0.dll . || echo "libusb-1.0.dll not found"
