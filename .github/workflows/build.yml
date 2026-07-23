@@ -1,0 +1,54 @@
+name: Build FPV Hunter C++
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: |
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-make
+            mingw-w64-x86_64-qt5
+            mingw-w64-x86_64-qt5-multimedia
+            mingw-w64-x86_64-qt5-speech
+            mingw-w64-x86_64-libiio
+            mingw-w64-x86_64-pkgconf
+            mingw-w64-x86_64-toolchain
+
+      - name: Verify libiio
+        shell: msys2 {0}
+        run: |
+          pkg-config --modversion libiio || echo "libiio not found"
+          ls -la /mingw64/include/iio.h || echo "iio.h not found"
+
+      - name: Configure CMake
+        shell: msys2 {0}
+        run: |
+          mkdir -p build && cd build
+          cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/mingw64
+
+      - name: Build
+        shell: msys2 {0}
+        run: |
+          cd build
+          mingw32-make -j$(nproc)
+          cp FPV_Hunter.exe ..
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FPV_Hunter_Cpp
+          path: FPV_Hunter.exe
