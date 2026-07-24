@@ -27,14 +27,13 @@ jobs:
             mingw-w64-x86_64-libiio
             mingw-w64-x86_64-pkgconf
             mingw-w64-x86_64-toolchain
-            mingw-w64-x86_64-qt5-tools
 
-      - name: Verify libiio and windeployqt
+      - name: Verify libiio and Qt
         shell: msys2 {0}
         run: |
           pkg-config --modversion libiio || echo "libiio not found"
           ls -la /mingw64/include/iio.h || echo "iio.h not found"
-          find /mingw64 -name "windeployqt*" 2>/dev/null || echo "windeployqt not found"
+          ls -la /mingw64/bin/Qt5Core.dll || echo "Qt5Core.dll not found"
 
       - name: Configure CMake
         shell: msys2 {0}
@@ -48,20 +47,28 @@ jobs:
           cd build
           mingw32-make -j$(nproc)
 
-      - name: Deploy all dependencies
+      - name: Copy all dependencies manually
         shell: msys2 {0}
         run: |
-          export PATH=/mingw64/bin:$PATH
           mkdir -p dist
+          mkdir -p dist/platforms
           cp build/FPV_Hunter.exe dist/
-          cd dist
-          windeployqt --release --no-translations FPV_Hunter.exe || echo "windeployqt failed, but continue"
-          cp /mingw64/bin/libiio.dll . || echo "libiio.dll not found"
-          cp /mingw64/bin/libxml2.dll . || echo "libxml2.dll not found"
-          cp /mingw64/bin/libusb-1.0.dll . || echo "libusb-1.0.dll not found"
-          cp /mingw64/bin/libgcc_s_seh-1.dll . || echo "libgcc_s_seh-1.dll not found"
-          cp /mingw64/bin/libstdc++-6.dll . || echo "libstdc++-6.dll not found"
-          cp /mingw64/bin/libwinpthread-1.dll . || echo "libwinpthread-1.dll not found"
+          # Qt DLL
+          cp /mingw64/bin/Qt5Core.dll dist/ || echo "Qt5Core.dll not found"
+          cp /mingw64/bin/Qt5Gui.dll dist/ || echo "Qt5Gui.dll not found"
+          cp /mingw64/bin/Qt5Widgets.dll dist/ || echo "Qt5Widgets.dll not found"
+          cp /mingw64/bin/Qt5Multimedia.dll dist/ || echo "Qt5Multimedia.dll not found"
+          cp /mingw64/bin/Qt5TextToSpeech.dll dist/ || echo "Qt5TextToSpeech.dll not found"
+          # Qt platform plugin (обязательно!)
+          cp /mingw64/share/qt5/plugins/platforms/qwindows.dll dist/platforms/ || echo "qwindows.dll not found"
+          # libiio and dependencies
+          cp /mingw64/bin/libiio.dll dist/ || echo "libiio.dll not found"
+          cp /mingw64/bin/libxml2.dll dist/ || echo "libxml2.dll not found"
+          cp /mingw64/bin/libusb-1.0.dll dist/ || echo "libusb-1.0.dll not found"
+          # GCC runtime
+          cp /mingw64/bin/libgcc_s_seh-1.dll dist/ || echo "libgcc_s_seh-1.dll not found"
+          cp /mingw64/bin/libstdc++-6.dll dist/ || echo "libstdc++-6.dll not found"
+          cp /mingw64/bin/libwinpthread-1.dll dist/ || echo "libwinpthread-1.dll not found"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
